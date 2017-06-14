@@ -1,0 +1,66 @@
+---
+title: "Linear Regression Coefficients"
+author: "Rogelio Caballero"
+date: "June 3, 2017"
+output: html_document
+---
+## Variances and coefficients
+
+Let's examine the relationship between the linear regression coefficients and the variances, covariances and means of the output and predictor.
+
+First, let's make ```R``` calculate the coefficients for us:
+```{r, message= FALSE}
+library(UsingR)
+data(galton)
+
+rl <- lm(child ~ parent, data = galton)
+summary(rl)
+```
+
+If the linear model is written as:
+
+$$
+y = \beta_1 x + \beta_2 
+$$
+
+the following relationships hold:
+
+$$
+\beta_1 = Corr(x, y)\frac{\sigma(y)}{\sigma(x)}
+$$
+$$
+\beta_2 = \bar{y}-\beta_1\bar{x}
+$$
+
+Let's check those against the direct results of the function ```lm(...)```:
+
+```{r}
+x <- galton$parent
+y <- galton$child
+
+mx <- mean(x)
+my <- mean(y)
+
+sx <- sd(x)
+sy <- sd(y)
+
+corr <- cor(x,y)
+
+beta1 <- corr*sy/sx
+beta1
+
+beta2 <- my - beta1*mx
+beta2
+```
+As we can see the methods agree (obviously).
+
+## Intervals
+
+If we evaluate the model with ```predict()``` we get an outcome and an interval. There are two kinds of intervals ```"confidence"``` and ```"prediction"```. The first one refers to the 95% confidence interval based on the data that is already existent, the latter refers to the probability that a *future* outcome falls in it, in other words, non-existent data.
+
+```{r}
+predict(rl, newdata = data.frame(parent = 0), interval = "confidence")
+predict(rl, newdata = data.frame(parent = 0), interval = "prediction")
+```
+
+As we can see the prediction interval is wider than the confidence interval since the values of non-existent data are more uncertain.
