@@ -54,4 +54,3 @@ plot(x1, y1)
 fit <- lm(y1~x1)
 round(hatvalues(fit)[1:10],3)
 round(dfbetas(fit)[1:10,2],3)
-# oh really meme

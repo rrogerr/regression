@@ -1,0 +1,101 @@
+---
+title: "Peer Graded Assignment Regression Models Course"
+author: "Rogelio Caballero"
+date: "June 23, 2017"
+output: pdf_document
+abstract: We conduct a brief exploratory analysis of the ```mtcars``` dataset and analyze some models to explain the relationship between the mileage per gallon and the type of transmission of the cars.
+---
+
+## Exploratory Analysis
+
+First let's load the dataset and take a look at the summary of the miles per galon variable ```mpg```.
+```{r}
+data(mtcars)
+summary(mtcars$mpg)
+```
+In the [Appendix](## Appendix), there is a boxplot that roughly shows how ```mpg``` is related to ```am```, a variable that indicates the type of transmission (0 represents automatic as we found [here][1]). We've defined a new categorical variable ```auto``` that indicates the type of transmission.
+```{r, echo = FALSE, message=FALSE}
+library(dplyr)
+
+mtcars <- mutate(mtcars, 
+                 auto = as.factor(ifelse(am, "manual", "automatic")))
+```
+
+The boxplot suggests that a manual transmission gives more miles per gallon. Let's check some intervals:
+
+```{r showtable, results='asis', message=FALSE}
+df <- aggregate(mpg~auto, data = mtcars, 
+          FUN = function(x)c(mn = mean(x), sd = sd(x)))
+
+library(xtable)
+xt <- xtable(do.call(data.frame, c(df, check.names = FALSE)))
+print(xt, type = "latex")
+```
+
+The intervals that are less than one standard deviation of the mean for each transmission type overlap, so the difference in mpg is worth exploring while accounting for variations in other parameters.
+
+## Regression
+
+Let's fit a linear model with ```mpg``` as outcome and only ```auto``` as predictor.
+```{r}
+a0 <- lm(mpg~auto, data = mtcars)
+summary(a0)$coef
+```
+As we can see the Intercept coincides with the mean for automatic transmission shown in the table (up to rounding error), and the coefficient ```automanual``` is the difference between the means of each transmission type. The very low p-values suggest that the coefficients are significantly different from zero.
+
+In the [Appendix](## Appendix) you'll be able to find one residuals plot of this model. It basically shows no outliers.
+
+Let's add the variable ```hp``` (horsepower) to the model (going blind here, I'm profoundly car-ignorant). 
+```{r}
+a1 <- lm(mpg ~ auto + hp, data = mtcars)
+summary(a1)$coef
+```
+
+Even though the coefficient of ```hp``` is small, it's statistically significant, which means that there is a small but definitely non-zero effect of horsepower on miles per gallon. This coefficient is the variation of ```mpg``` due to the increase of one unit of ```hp``` keeping auto fixed. Plus, the coefficient of ```automanual``` is positive, which reinforces the conclusion that manual transmissions give more ```mpg```. Now, we are going to add weight ```wt```:
+```{r}
+a2 <- lm(mpg ~ auto + hp + wt, data = mtcars)
+summary(a2)$coef
+```
+Again, the positive coefficient of ```automanual``` says that a manual transmission gives more miles per gallon. The coefficient of ```wt``` is the change in ```mpg``` per unit of weight keeping the other variables constant.
+
+Let's see whether the addition of variables to our model gives us more detail:
+```{r}
+anova(a0, a1, a2, test = "Chisq")
+```
+The low p-values show that the two models built on top of ```a0``` are significantly different from ```a0``` and, hence, they make a good selection.
+
+## Conclusions
+
+Each one of the three nested models that we used reduced the residual sum of squares with respect to its predecessor, which means that each variable that we chose added more detail to our overall understanding of the variations of ```mpg```. In each one of the models, we saw that a manual transmission gives more miles per gallon, a conclusion drawn from the sign of the coefficient of ```auto```.
+
+## Appendix
+
+Full code can be found in my Github repository ([here][2]).
+
+Boxplot of ```mpg``` vs. transmission type:
+```{r, fig.width=7*(7/12), fig.height=6*(7/12), fig.align= "center", echo=FALSE}
+library(ggplot2)
+
+qplot(auto, mpg, data = mtcars,
+      main="Miles per gallon",
+      xlab="Transmission", ylab="Miles per gallon")+
+        geom_boxplot(aes(fill = auto))
+```
+
+Residuals of the ```mpg ~ auto``` model:
+```{r, fig.width=7*(7/12), fig.height=6*(7/12), fig.align= "center"}
+plot(a0, which = 1)
+```
+
+Residuals of the ```mpg ~ auto + hp``` model:
+```{r, fig.width=7*(7/12), fig.height=6*(7/12), fig.align= "center"}
+plot(a1, which = 2)
+```
+
+Residuals of the ```mpg ~ auto + hp + wt``` model:
+```{r, fig.width=7*(7/12), fig.height=6*(7/12), fig.align= "center"}
+plot(a2, which = 3)
+```
+
+[1]: https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/mtcars.html
+[2]: https://github.com/rrogerr/regression
